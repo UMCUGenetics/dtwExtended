@@ -1,4 +1,6 @@
-#In this R script we will generate some demo data using the Sinus function
+#In this R script we will generate some demo data using the Sinus function and then we will
+#the functions in the function.R script to do multiple dtw alignment, local alignment and 
+#circular alignment
 
 #We will generate a sinus sequence of 2 frequencies length and subset portions of the sequence 
 #of different length that have some overlap between them
@@ -30,9 +32,3 @@ dataList <- lapply(X = fractionsList, function(x){
     return(data.frame(t = c(1:length(x)), y = y[x]))
     
 })
-
-#save the object as an RData file that can be loaded in the test environment
-save(dataList, file = 'Demo files/demoData.RData')
-
-
-
