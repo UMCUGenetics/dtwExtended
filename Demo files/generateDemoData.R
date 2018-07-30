@@ -24,10 +24,10 @@ fractionsList <- list(s1 = c(1:120),
                       s10 = c(600:720))
 
 
-
+#create dataframes of the portions and put them in a list
 dataList <- lapply(X = fractionsList, function(x){
     
-    return(data.frame(t = x, y = y[x]))
+    return(data.frame(t = c(1:length(x)), y = y[x]))
     
 })
 
