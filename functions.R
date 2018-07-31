@@ -2,13 +2,16 @@
 #using dynamic time warping
 
 
-#this function takes as arguments 2 dataframes that will be aligned, a vector that contains the column numbers
-#for each dataframe that indicate which data should be used for the alignment, and a list with the step
-#patterns that want to be used for each type of alignment (from the left, from the right, local and global)
-#if the patterns are NULL (default), asymmetrixP05 will be used for the first 3 alignments and symmetricP2 will
-#be used for the global alignment.
-#showDistPlot, if TRUE it will plot a representation of distance versus the sliding window
-localUnivariateAlignment <- function(df1, df2, dataColumns, stepPattern = NULL, showDistPlot = FALSE){
+#this function makes global and local alignments from two univariate series, decides which type of alignment is best
+#and returns a dataframe with both query sequences and the result sequence
+#it has 5 arguments, the first 3 are required:
+    # - df1, df2: two dataframes with the series data to be aligned
+    # - dataColumns: a vector of length 2, indicating which columns from each df to be used for the alignment
+    # - stepPatter: a list of length 4 with the different step patterns that can be used for the alignment, for more 
+    #   information see the dtw package
+    # - showDistPlot: a boolean, if TRUE then it will also plot the normalized distance in the alignment over the 
+    #   sliding for the local alignment and the global alignment
+pairwiseAlignment <- function(df1, df2, dataColumns, stepPattern = NULL, showDistPlot = FALSE){
     
     #argument check
     if(is.null(stepPattern)){
@@ -109,7 +112,7 @@ localUnivariateAlignment <- function(df1, df2, dataColumns, stepPattern = NULL, 
     #open local alignment---------------------------------------------------------------
     alignment <- try(dtw(df1[,dataColumns[1]], 
                          df2[,dataColumns[2]], 
-                         step.pattern = stepPattern[[3]], 
+                         step.pattern = asymmetricP05, 
                          keep.internals  = TRUE,  
                          open.end = TRUE, 
                          open.begin = TRUE), silent = TRUE)
@@ -268,7 +271,7 @@ localUnivariateAlignment <- function(df1, df2, dataColumns, stepPattern = NULL, 
             dfQueryData <- df1[model$index1[which(model$index2 == ind)], dataColumns[1]]
             dfRefData <- df2[ind, dataColumns[2]]
             
-            profileDf[ind + continuation, 2:3] <- c(mean(dfRefData), mean(dfQueryData))
+            profileDf[ind , 2:3] <- c(mean(dfRefData), mean(dfQueryData))
         }
         
         hangRightDf <- data.frame(time = NA, 
@@ -298,6 +301,128 @@ localUnivariateAlignment <- function(df1, df2, dataColumns, stepPattern = NULL, 
     }
     
     profileDf$uni <- apply(profileDf[,2:3], 1, mean, na.rm = T)
-    
     return(profileDf)
+}
+
+multiAlignmentProfile <- function(dfList, dataColumns, stepPattern = NULL, 
+                                  showDistPlot = FALSE, showDendrogram = FALSE, showAlignmentPlot = FALSE){
+    
+    require(dtw)
+    
+    while(length(dfList) > 1){
+        for(i in 1:length(dfList)){
+            if(i == 1){
+                distMatrix <- matrix(data = NA, nrow = length(dfList), ncol = length(dfList))
+                colnames(distMatrix) <- names(dfList)
+                rownames(distMatrix) <- names(dfList)
+            }
+            for(j in 1:length(dfList)){
+                if(j > i){
+                    next
+                }
+                if('uni' %in% colnames(dfList[[i]])){
+                    distMatrix[i,j] <- dtw(x = na.omit(dfList[[i]][,which(colnames(dfList[[i]]) == 'uni')]), 
+                                           y = na.omit(dfList[[j]][,dataColumns[2]]), 
+                                           distance.only = T)$distance
+                }else if('uni' %in% colnames(dfList[[j]])){
+                    distMatrix[i,j] <- dtw(x = na.omit(dfList[[i]][,dataColumns[1]]), 
+                                           y = na.omit(dfList[[j]][,which(colnames(dfList[[j]]) == 'uni')]), 
+                                           distance.only = T)$distance
+                }else if('uni' %in% colnames(dfList[[i]]) & 'uni' %in% colnames(dfList[[j]])){
+                    distMatrix[i,j] <- dtw(x = na.omit(dfList[[i]][,which(colnames(dfList[[i]]) == 'uni')]), 
+                                           y = na.omit(dfList[[j]][,which(colnames(dfList[[j]]) == 'uni')]), 
+                                           distance.only = T)$distance
+                }else{
+                    distMatrix[i,j] <- dtw(x = na.omit(dfList[[i]][,dataColumns[1]]), 
+                                           y = na.omit(dfList[[j]][,dataColumns[2]]), 
+                                           distance.only = T)$distance
+                }
+            }
+        }
+        diag(distMatrix) <- NA
+        
+        #find the most similar cells
+        indexes <- which(distMatrix == min(distMatrix, na.rm = T), arr.ind = T)
+        dfname1 <- rownames(distMatrix)[indexes[,1]]
+        dfname2 <- colnames(distMatrix)[indexes[,2]]
+        
+        if(showDendrogram){
+            if(length(dfList) > 2){
+                cluster <- hclust(d = as.dist(distMatrix))
+                plot(cluster)
+            }
+        }
+        
+        
+        #create a temporary datalist from which the dfs that we use for alignment are removed
+        #and the profiles of those are added
+        #dfs that we will use for the next alignment
+        df1 <- dfList[[which(names(dfList) == dfname1)]]
+        df2 <- dfList[[which(names(dfList) == dfname2)]]
+        #remove them from the datalist
+        dfList <- dfList[-c(which(names(dfList) == dfname1), which(names(dfList) == dfname2))]
+        
+        #swap positions if df2 is shorter than df1
+        if(nrow(df1) > nrow(df2)){
+            tdf1 <- df1
+            tdf2 <- df2
+            df1 <- tdf2
+            df2 <- tdf1
+        }
+        
+        #add alignment to the temporary datalist
+        print(paste(dfname1, 'and' ,dfname2))
+        
+        if('uni' %in% colnames(df1) & 'uni' %in% colnames(df2)){
+            profileDf <- pairwiseAlignment(df1 = df1, 
+                                           df2 = df2, 
+                                           dataColumns = c(which(colnames(df1) == 'uni'), 
+                                                           which(colnames(df2) == 'uni')), 
+                                           stepPattern = stepPattern,
+                                           showDistPlot = showDistPlot)
+        }else if('uni' %in% colnames(df1)){
+            profileDf <- pairwiseAlignment(df1 = df1, 
+                                           df2 = df2, 
+                                           dataColumns = c(which(colnames(df1) == 'uni'), 
+                                                           dataColumns[2]), 
+                                           stepPattern = stepPattern,
+                                           showDistPlot = showDistPlot)
+        }else if('uni' %in% colnames(df2)){
+            profileDf <- pairwiseAlignment(df1 = df1, 
+                                           df2 = df2, 
+                                           dataColumns = c(dataColumns[1], 
+                                                           which(colnames(df2) == 'uni')), 
+                                           stepPattern = stepPattern,
+                                           showDistPlot = showDistPlot)
+        }else{
+            profileDf <- pairwiseAlignment(df1 = df1, 
+                                           df2 = df2, 
+                                           dataColumns = dataColumns, 
+                                           stepPattern = stepPattern,
+                                           showDistPlot = showDistPlot)
+        }
+        
+        if(showAlignmentPlot){
+            pp <- ggplot(data = profileDf, aes_string(x = names(profileDf)[1], y = names(profileDf)[4])) + 
+                geom_point() + 
+                coord_cartesian(ylim = c(-1,1)) + 
+                ggtitle('Unified sequences')
+            p1 <- ggplot(data = profileDf, aes_string(x = names(profileDf)[1], y = names(profileDf)[3])) + 
+                geom_point() + 
+                coord_cartesian(ylim = c(-1,1)) + 
+                ggtitle('Sequence1')
+            p2 <- ggplot(data = profileDf, aes_string(x = names(profileDf)[1], y = names(profileDf)[2])) + 
+                geom_point() + 
+                coord_cartesian(ylim = c(-1,1))+ 
+                ggtitle('Sequence2')
+            
+            plotList <- list(pp, p2, p1)
+            gridplot <- grid.arrange(grobs = plotList, ncol = 1, as.table = FALSE)
+            plot(gridplot)
+        }
+        
+        dfList[[length(dfList) + 1]] <- profileDf
+        names(dfList)[length(dfList)] <- paste0(dfname1, dfname2)
+    }
+    return(dfList)
 }
