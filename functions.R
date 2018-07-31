@@ -144,7 +144,7 @@ localUnivariateAlignment <- function(df1, df2, dataColumns, stepPattern = NULL, 
         aligList[[k]] <- alignment
     }
     
-    #model evaluation as function of sliding
+    #model evaluation as function of sliding---------------------------------------------
     if(showDistPlot){
         require(ggplot2)
         df <- data.frame(mod = 1:length(aligList), dist = sapply(aligList, '[[', 12))
@@ -165,13 +165,14 @@ localUnivariateAlignment <- function(df1, df2, dataColumns, stepPattern = NULL, 
         plot(p)
     }
     
+    #check best bitting alignment ----------------------------------------------------
     #defining the indexes of the number of models per type of model
     modelLeft <- c(1:nrow(df1))
     modelRight <- c((nrow(df1) + 1):(nrow(df1)*2))
     modelLocal <- length(aligList) - 1
     modelGlobal <- length(aligList) 
     
-    #finding the best model
+    #finding the best alignment
     smallestDistMod <- which(sapply(aligList, '[[', 12) == min(sapply(aligList, '[[', 12)))
     
     if(length(smallestDistMod > 1)){
@@ -180,6 +181,7 @@ localUnivariateAlignment <- function(df1, df2, dataColumns, stepPattern = NULL, 
     
     #creating the profile from the alignment of the two dfs in different ways depending
     #on which type of model is best
+    #LOCAL -----------
     if(smallestDistMod == modelLocal){
         print('LOCAL alignment')
         profileDf <- data.frame(time = c(1:max(nrow(df1), nrow(df2))), 
@@ -213,7 +215,8 @@ localUnivariateAlignment <- function(df1, df2, dataColumns, stepPattern = NULL, 
         #remove double NAs
         profileDf <- profileDf[rowSums(is.na(profileDf[2:3])) != 2, ]
         profileDf$time <- 1:nrow(profileDf)
-        
+    
+    # from the LEFT -------------
     }else if(smallestDistMod %in% modelLeft){
         print('LEFT coming alignment')
         #how many timepoints are left out
@@ -244,7 +247,7 @@ localUnivariateAlignment <- function(df1, df2, dataColumns, stepPattern = NULL, 
         
         profileDf$time <- c(1:nrow(profileDf))
         
-        
+    # from the RIGHT ----------------------
     }else if(smallestDistMod %in% modelRight){
         print('RIGHT coming alignment')
         #how many timepoints are left out
@@ -276,6 +279,7 @@ localUnivariateAlignment <- function(df1, df2, dataColumns, stepPattern = NULL, 
         
         profileDf$time <- c(1:nrow(profileDf))
         
+    #GLOBAL --------------------------
     }else if(smallestDistMod == modelGlobal){
         print('GLOBAL alignment')
         profileDf <- data.frame(time = c(1:max(nrow(df1), nrow(df2))), 
