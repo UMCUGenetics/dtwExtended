@@ -6,8 +6,8 @@
 #of different length that have some overlap between them
 
 #representation of the data
-y <- round(sin(seq(from = 0, to = 4*pi, length.out = 720)), digits = 5)
-t <- c(1:720)
+y <- round(sin(seq(from = 0, to = 2.5*pi, length.out = 420)), digits = 5)
+t <- c(1:420)
 
 plot(t, y)
 
@@ -20,10 +20,10 @@ fractionsList <- list(s1 = c(1:120),
                       s4 = c(160:250),
                       s5 = c(230:320),
                       s6 = c(290:420),
-                      s7 = c(410:530),
-                      s8 = c(390:640),
-                      s9 = c(600:720),
-                      s10 = c(600:720))
+                      s7 = c(270:390),
+                      s8 = c(310:400),
+                      s9 = c(300:420),
+                      s10 = c(300:420))
 
 
 #create dataframes of the portions and put them in a list
@@ -142,3 +142,14 @@ p2 <- ggplot(data = profile, aes_string(x = names(profile)[1], y = names(profile
 plotList <- list(pp, p2, p1)
 gridplot <- grid.arrange(grobs = plotList, ncol = 1, as.table = FALSE)
 plot(gridplot)
+
+
+#next we will make a profile from doing a progressive pair-wise alignment of all the portions
+
+profileDfList <- multiAlignmentProfile(dfList = dataList, dataColumns = c(2,2), showDendrogram = F, showAlignmentPlot = T)
+
+
+ggplot(data = profileDfList[[1]], aes(x = time, y = uni)) + 
+    geom_point() + 
+    coord_cartesian(ylim = c(-1,1)) + 
+    ggtitle('Sequence1')
