@@ -3,7 +3,7 @@
 
 
 #this function takes as arguments 2 dataframes that will be aligned, a vector that contains the column numbers
-#for each dataframe that indicate which data should be used for the alignment, and a vector with the step
+#for each dataframe that indicate which data should be used for the alignment, and a list with the step
 #patterns that want to be used for each type of alignment (from the left, from the right, local and global)
 #if the patterns are NULL (default), asymmetrixP05 will be used for the first 3 alignments and symmetricP2 will
 #be used for the global alignment.
@@ -12,11 +12,11 @@ localUnivariateAlignment <- function(df1, df2, dataColumns, stepPattern = NULL, 
     
     #argument check
     if(is.null(stepPattern)){
-        stepPattern <- c(asymmetricP05, asymmetricP05, asymmetricP05, symmetricP2)
-    }
-    if(length(stepPattern) != 4){
+        stepPattern <- list(asymmetricP05, asymmetricP05, asymmetricP05, symmetricP2)
+    }else if(length(stepPattern) != 4){
         stop(print('Please provide 4 step patterns as a vector or leave it empty for default settings.'))
     }
+    
     if(missing(df1) |  missing(df2) |  missing(dataColumns)){
         stop(print('You are missing the minimum required arguments: df1, df2 and/or dataColumns'))
     }
@@ -29,6 +29,7 @@ localUnivariateAlignment <- function(df1, df2, dataColumns, stepPattern = NULL, 
     if(length(dataColumns) != 2){
         stop(print('dataColumns needs to be a vector of length 2, each number corresponds to a column of df1 and df2'))
     }
+    
     
     #list where we store all the alignment objects
     aligList <- list()
@@ -44,7 +45,7 @@ localUnivariateAlignment <- function(df1, df2, dataColumns, stepPattern = NULL, 
         #alignment dtw function call
         alignment <- try(dtw(tempdf1[,dataColumns[1]], 
                              df2[,dataColumns[2]], #reference
-                             step.pattern = stepPattern[1], 
+                             step.pattern = stepPattern[[1]], 
                              keep.internals  = TRUE,  
                              open.end = TRUE, 
                              open.begin = FALSE), silent = TRUE)
@@ -79,7 +80,7 @@ localUnivariateAlignment <- function(df1, df2, dataColumns, stepPattern = NULL, 
         #alignment dtw call
         alignment <- try(dtw(tempdf1[,dataColumns[1]], 
                              df2[,dataColumns[2]], 
-                             step.pattern = stepPattern[2], 
+                             step.pattern = stepPattern[[2]], 
                              keep.internals  = TRUE,  
                              open.end = FALSE, 
                              open.begin = TRUE), silent = TRUE)
@@ -108,7 +109,7 @@ localUnivariateAlignment <- function(df1, df2, dataColumns, stepPattern = NULL, 
     #open local alignment---------------------------------------------------------------
     alignment <- try(dtw(df1[,dataColumns[1]], 
                          df2[,dataColumns[2]], 
-                         step.pattern = stepPattern[3], 
+                         step.pattern = stepPattern[[3]], 
                          keep.internals  = TRUE,  
                          open.end = TRUE, 
                          open.begin = TRUE), silent = TRUE)
@@ -127,7 +128,7 @@ localUnivariateAlignment <- function(df1, df2, dataColumns, stepPattern = NULL, 
     #global alignment---------------------------------------------------------------------
     alignment <- try(dtw(df1[,dataColumns[1]], 
                          df2[,dataColumns[2]], #reference
-                         step.pattern = stepPattern[4], 
+                         step.pattern = stepPattern[[4]], 
                          keep.internals  = TRUE,  
                          open.end = FALSE, 
                          open.begin = FALSE), silent = TRUE)
@@ -143,14 +144,24 @@ localUnivariateAlignment <- function(df1, df2, dataColumns, stepPattern = NULL, 
         aligList[[k]] <- alignment
     }
     
-    #model evaluation
+    #model evaluation as function of sliding
     if(showDistPlot){
+        require(ggplot2)
         df <- data.frame(mod = 1:length(aligList), dist = sapply(aligList, '[[', 12))
         
         p <- ggplot(data = df, aes(x = mod, y = dist)) + 
             geom_point() + 
-            loesTheme + 
-            coord_cartesian()
+            coord_cartesian() + 
+            theme(axis.title.x = element_text(size= 14, face = NULL), 
+                  axis.title.y = element_text(size= 14, face = NULL), 
+                  axis.text.x = element_text(size= 14),
+                  axis.text.y = element_text(size= 14),
+                  axis.line.x = element_line(color="black", size = 1),
+                  axis.line.y = element_line(color="black", size = 1),
+                  panel.grid.major = element_blank(),                                                 
+                  panel.grid.minor = element_blank(),                                                  
+                  panel.background = element_blank()) + 
+            coord_cartesian(ylim = c(0,1))
         plot(p)
     }
     
@@ -162,6 +173,10 @@ localUnivariateAlignment <- function(df1, df2, dataColumns, stepPattern = NULL, 
     
     #finding the best model
     smallestDistMod <- which(sapply(aligList, '[[', 12) == min(sapply(aligList, '[[', 12)))
+    
+    if(length(smallestDistMod > 1)){
+        smallestDistMod <- smallestDistMod[length(smallestDistMod)]
+    }
     
     #creating the profile from the alignment of the two dfs in different ways depending
     #on which type of model is best
@@ -196,7 +211,7 @@ localUnivariateAlignment <- function(df1, df2, dataColumns, stepPattern = NULL, 
         }
         
         #remove double NAs
-        profileDf <- profileDf[-which(apply(profileDf[,2:3], 1, sum, na.rm = T) == 0),]
+        profileDf <- profileDf[rowSums(is.na(profileDf[2:3])) != 2, ]
         profileDf$time <- 1:nrow(profileDf)
         
     }else if(smallestDistMod %in% modelLeft){
@@ -211,7 +226,7 @@ localUnivariateAlignment <- function(df1, df2, dataColumns, stepPattern = NULL, 
         profileDf[1:(nrow(df1) - length(unique(model$index1))), 'dfquery'] <- df1[1:(nrow(df1) - length(unique(model$index1))), dataColumns[1]]
         #extract the best model
         
-        continuation <- which(is.na(profileDf$dfquery))[1]
+        continuation <- which(is.na(profileDf$dfquery))[1]-1
         #do the index alignment
         for(ind in unique(model$index2)){
             dfQueryData <- df1[model$index1[which(model$index2 == ind)] + continuation, dataColumns[1]]
@@ -225,7 +240,7 @@ localUnivariateAlignment <- function(df1, df2, dataColumns, stepPattern = NULL, 
                                  dfquery = NA)
         profileDf <- rbind(profileDf, hangLeftDf)
         
-        profileDf <- profileDf[-which(apply(profileDf[,2:3], 1, sum, na.rm = T) == 0),]
+        profileDf <- profileDf[rowSums(is.na(profileDf[2:3])) != 2, ]
         
         profileDf$time <- c(1:nrow(profileDf))
         
@@ -257,7 +272,7 @@ localUnivariateAlignment <- function(df1, df2, dataColumns, stepPattern = NULL, 
                                   dfref = NA,
                                   dfquery = df1[c((which(modelRight == smallestDistMod)+1):nrow(df1)),dataColumns[1]])
         profileDf <- rbind(profileDf, hangRightDf)
-        profileDf <- profileDf[-which(apply(profileDf[,2:3], 1, sum, na.rm = T) == 0),]
+        profileDf <- profileDf[rowSums(is.na(profileDf[2:3])) != 2, ]
         
         profileDf$time <- c(1:nrow(profileDf))
         
@@ -279,49 +294,6 @@ localUnivariateAlignment <- function(df1, df2, dataColumns, stepPattern = NULL, 
     }
     
     profileDf$uni <- apply(profileDf[,2:3], 1, mean, na.rm = T)
-    loess <- loess(formula = uni ~ time, data = profileDf, span = 0.3)
-    profileDf$uni <- predict(loess)
-    
-    p1 <- ggplot() + 
-        geom_rect(data = profileDf, aes(xmin = time, xmax = time, ymin = -1, ymax = Inf, 
-                                        color = dfquery, 
-                                        fill = dfquery), size = 1, show.legend = F) + 
-        geom_line(data = profileDf, aes(x = time, y = dfquery), color = 'black', size = 2, na.rm = T) + 
-        scale_color_gradient2(low = 'green', 
-                              mid = 'yellow', 
-                              high = 'red', 
-                              na.value = 'white', 
-                              limits = c(-1, 1)) + 
-        coord_cartesian(ylim = c(-1,1))
-    
-    p2 <- ggplot() + 
-        geom_rect(data = profileDf, aes(xmin = time, xmax = time, ymin = -1, ymax = Inf, 
-                                        color = dfref, 
-                                        fill = dfref), size = 1, show.legend = F) + 
-        geom_line(data = profileDf, aes(x = time, y = dfref), color = 'black', size = 2, na.rm = T) + 
-        scale_color_gradient2(low = 'green', 
-                              mid = 'yellow', 
-                              high = 'red', 
-                              na.value = 'white', 
-                              limits = c(-1, 1)) + 
-        coord_cartesian(ylim = c(-1,1))
-    
-    pp <- ggplot() + 
-        geom_rect(data = profileDf, aes(xmin = time, xmax = time, ymin = -1, ymax = Inf, 
-                                        color = uni, 
-                                        fill = uni), size = 1, show.legend = F) + 
-        geom_line(data = profileDf, aes(x = time, y = uni), color = 'black', size = 2, na.rm = T) + 
-        scale_color_gradient2(low = 'green', 
-                              mid = 'yellow', 
-                              high = 'red', 
-                              na.value = 'white', 
-                              limits = c(-1, 1)) + 
-        coord_cartesian(ylim = c(-1,1))
-    
-    
-    plotList <- list(pp, p2, p1)
-    gridplot <- grid.arrange(grobs = plotList, ncol = 1, as.table = FALSE)
-    plot(gridplot)
     
     return(profileDf)
 }
