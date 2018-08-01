@@ -458,3 +458,168 @@ multiAlignmentProfile <- function(dfList, dataColumns, stepPattern = NULL,
 
 
 
+circularizeSequenceUnivariate <- function(sequenceDf, dataColumn, stepPattern = NULL, showDistPlot = FALSE){
+    
+    aligList <- list()
+    k <- 0
+    
+    #cut the profile in half and try to fit it from the left to the complete profile
+    cutDfLeft <- sequenceDf[round(nrow(sequenceDf)/2):nrow(sequenceDf),]
+    
+    #query enters the reference from the left
+    i <- nrow(cutDfLeft)
+    while(i >= 1){
+        #dataframe with the fraction of the whole profile sequence
+        tempcutDfLeft <- cutDfLeft[i:nrow(cutDfLeft), ]
+        
+        #alignment dtw call
+        alignment <- try(dtw(tempcutDfLeft[,dataColumn], 
+                             sequenceDf[,dataColumn], #reference
+                             step.pattern = stepPattern[[1]], 
+                             keep.internals  = TRUE,  
+                             open.end = TRUE, 
+                             open.begin = FALSE), silent = TRUE)
+        
+        if(class(alignment) == 'try-error'){
+            errorList <- list(100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 1000)
+            #increase the size of the window
+            i <- i - 1
+            #counter for the list of alignments
+            k <- k + 1
+            aligList[[k]] <- errorList
+        }else{
+            #increase the size of the window
+            i <- i - 1
+            #counter for the list of alignments
+            k <- k + 1
+            aligList[[k]] <- alignment
+        }
+        
+        #just in case an extra break loop condition
+        if(length(aligList) == nrow(cell1)){
+            break
+        }
+    }
+    
+    #cut the profile in half and try to fit it from the right to the complete profile
+    cutDfRight <- sequenceDf[1:round(nrow(sequenceDf)/2),]
+    
+    #query enters the reference from the right
+    i <- 1
+    while(i <= nrow(cutDfRight)){
+        #dataframe with the fraction of the whole cell data
+        tempcutDfRight <- cutDfRight[1:i, ]
+        
+        #alignment dtw call
+        alignment <- try(dtw(tempcutDfRight[,dataColumn], 
+                             sequenceDf[,dataColumn], #reference
+                             step.pattern = stepPattern[[2]], 
+                             keep.internals  = TRUE,  
+                             open.end = FALSE, 
+                             open.begin = TRUE), silent = TRUE)
+        
+        if(class(alignment) == 'try-error'){
+            errorList <- list(100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 1000)
+            #increase the size of the window
+            i <- i + 1
+            #counter for the list of alignments
+            k <- k + 1
+            aligList[[k]] <- errorList
+        }else{
+            #increase the size of the window
+            i <- i + 1
+            #counter for the list of alignments
+            k <- k + 1
+            aligList[[k]] <- alignment
+        }
+        
+        #just in case an extra break loop condition
+        if(length(aligList) == (nrow(cell1)*2)){
+            break
+        }
+    }
+    
+    if(showDistPlot){
+        require(ggplot2)
+        df <- data.frame(mod = 1:length(aligList), dist = sapply(aligList, '[[', 12))
+        
+        p <- ggplot(data = df, aes(x = mod, y = dist)) + 
+            geom_point() + 
+            coord_cartesian() + 
+            theme(axis.title.x = element_text(size= 14, face = NULL), 
+                  axis.title.y = element_text(size= 14, face = NULL), 
+                  axis.text.x = element_text(size= 14),
+                  axis.text.y = element_text(size= 14),
+                  axis.line.x = element_line(color="black", size = 1),
+                  axis.line.y = element_line(color="black", size = 1),
+                  panel.grid.major = element_blank(),                                                 
+                  panel.grid.minor = element_blank(),                                                  
+                  panel.background = element_blank()) + 
+            coord_cartesian(ylim = c(0,1))
+        plot(p)
+    }
+    
+    modelLeft <- c(1:nrow(cutDfLeft))
+    modelRight <- c((nrow(cutDfRight) + 1):(nrow(sequenceDf)))
+    
+    #finding the alignment with smalles normalized distance
+    smallestDistMod <- which(sapply(aligList, '[[', 12) == min(sapply(aligList, '[[', 12)))
+    
+    if(smallestDistMod %in% modelLeft){
+        print('LEFT coming alignment')
+        #how many timepoints are left out
+        hanglength <- nrow(cutDfLeft) - which(modelLeft == smallestDistMod)
+        #create our profile df
+        profileDf <- data.frame(time = c(1:nrow(profileDf)), 
+                                cellref = profileDf[,dataColumn], 
+                                cellquery = NA)
+        model <- aligList[[smallestDistMod]]
+        
+        #do the index alignment
+        for(ind in unique(model$index2)){
+            cellQueryData <- cutDfLeft[(model$index1[which(model$index2 == ind)] + 
+                                                    nrow(cutDfLeft) - 
+                                                    length(unique(model$index1))), dataColumn]
+            
+            cellRefData <- sequenceDf[ind, dataColumn]
+            profileDf[ind, 2:3] <- c(mean(cellRefData), mean(cellQueryData))
+        }
+        
+        #remove the cut timepoints from the end
+        profileDf <- profileDf[-rev(1:nrow(profileDf))[1:length(unique(model$index1))],]
+        
+        profileDf$uni <- apply(profileDf[,2:3], 1, mean, na.rm = T)
+        profileDf$time <- c(1:nrow(profileDf))
+        
+        return(profileDf)
+        
+    }else if(smallestDistMod %in% modelRight){
+        print('RIGHT coming alignment')
+        #how many timepoints are left out
+        hanglength <- nrow(cutDfRight) - which(modelRight == smallestDistMod)
+        #create our profile df
+        profileDf <- data.frame(time = c(1:nrow(sequenceDf)), 
+                                cellref = sequenceDf[,dataColumn], 
+                                cellquery = NA)
+        #select the model
+        model <- aligList[[smallestDistMod]]
+        
+        for(ind in unique(model$index2)){
+            cellQueryData <- cutDfRight[(model$index1[which(model$index2 == ind)] + 
+                                                    nrow(cutDfRight) - 
+                                                    length(unique(model$index1))), dataColumn]
+            cellRefData <- sequenceDf[ind, dataColumn]
+            
+            profileDf[ind, 2:3] <- c(mean(cellRefData), mean(cellQueryData))
+        }
+        
+        #remove the cut timepoints from the begining
+        profileDf <- profileDf[-c(1:length(unique(model$index1))),]
+        profileDf$uni <- apply(profileDf[,2:3], 1, mean, na.rm = T)
+        
+        profileDf$time <- c(1:nrow(profileDf))
+        
+        return(profileDf)
+        
+    }
+}
