@@ -12,7 +12,7 @@
     # - showDistPlot: a boolean, if TRUE then it will also plot the normalized distance in the alignment over the 
     #   sliding for the local alignment and the global alignment
 #Returns: a dataframe with a time, query sequence, ref sequence and aligned sequence columns
-pairwiseAlignment <- function(df1, df2, dataColumns, stepPattern = NULL, showDistPlot = FALSE){
+pairwiseUnivariateAlignment <- function(df1, df2, dataColumns, stepPattern = NULL, showDistPlot = FALSE){
     
     #argument check
     if(is.null(stepPattern)){
@@ -333,8 +333,8 @@ pairwiseAlignment <- function(df1, df2, dataColumns, stepPattern = NULL, showDis
 # - showDendrogram = plots the dendrogram of the distance matrix
 # - showAlignmentPlot = plots the alignment between the two sequences and the new aligned-sequence
 #Returns: a dataframe with a time, query sequence, ref sequence and aligned sequence columns
-multiAlignmentProfile <- function(dfList, dataColumns, stepPattern = NULL, 
-                                  showDistPlot = FALSE, showDendrogram = FALSE, showAlignmentPlot = FALSE){
+multiAlignmentUnivariateProfile <- function(dfList, dataColumns, stepPattern = NULL, 
+                                            showDistPlot = FALSE, showDendrogram = FALSE, showAlignmentPlot = FALSE){
     
     require(dtw)
     
@@ -453,7 +453,7 @@ multiAlignmentProfile <- function(dfList, dataColumns, stepPattern = NULL,
         dfList[[length(dfList) + 1]] <- profileDf
         names(dfList)[length(dfList)] <- paste0(dfname1, dfname2)
     }
-    return(unlist(dfList))
+    return(dfList[[1]])
 }
 
 
@@ -462,6 +462,10 @@ circularizeSequenceUnivariate <- function(sequenceDf, dataColumn, stepPattern = 
     
     aligList <- list()
     k <- 0
+    
+    if(is.null(stepPattern)){
+        stepPattern <- list(asymmetricP05, asymmetricP05)
+    }
     
     #cut the profile in half and try to fit it from the left to the complete profile
     cutDfLeft <- sequenceDf[round(nrow(sequenceDf)/2):nrow(sequenceDf),]
@@ -496,7 +500,7 @@ circularizeSequenceUnivariate <- function(sequenceDf, dataColumn, stepPattern = 
         }
         
         #just in case an extra break loop condition
-        if(length(aligList) == nrow(cell1)){
+        if(length(aligList) == nrow(sequenceDf)){
             break
         }
     }
@@ -534,7 +538,7 @@ circularizeSequenceUnivariate <- function(sequenceDf, dataColumn, stepPattern = 
         }
         
         #just in case an extra break loop condition
-        if(length(aligList) == (nrow(cell1)*2)){
+        if(length(aligList) == (nrow(sequenceDf)*2)){
             break
         }
     }
@@ -564,6 +568,10 @@ circularizeSequenceUnivariate <- function(sequenceDf, dataColumn, stepPattern = 
     
     #finding the alignment with smalles normalized distance
     smallestDistMod <- which(sapply(aligList, '[[', 12) == min(sapply(aligList, '[[', 12)))
+    
+    if(length(smallestDistMod) > 1){
+        smallestDistMod <- smallestDistMod[length(smallestDistMod)]
+    }
     
     if(smallestDistMod %in% modelLeft){
         print('LEFT coming alignment')
@@ -605,9 +613,7 @@ circularizeSequenceUnivariate <- function(sequenceDf, dataColumn, stepPattern = 
         model <- aligList[[smallestDistMod]]
         
         for(ind in unique(model$index2)){
-            cellQueryData <- cutDfRight[(model$index1[which(model$index2 == ind)] + 
-                                                    nrow(cutDfRight) - 
-                                                    length(unique(model$index1))), dataColumn]
+            cellQueryData <- cutDfRight[(model$index1[which(model$index2 == ind)]), dataColumn]
             cellRefData <- sequenceDf[ind, dataColumn]
             
             profileDf[ind, 2:3] <- c(mean(cellRefData), mean(cellQueryData))
