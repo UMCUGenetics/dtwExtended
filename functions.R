@@ -7,10 +7,11 @@
 #it has 5 arguments, the first 3 are required:
     # - df1, df2: two dataframes with the series data to be aligned
     # - dataColumns: a vector of length 2, indicating which columns from each df to be used for the alignment
-    # - stepPatter: a list of length 4 with the different step patterns that can be used for the alignment, for more 
+    # - stepPattern: a list of length 4 with the different step patterns that can be used for the alignment, for more 
     #   information see the dtw package
     # - showDistPlot: a boolean, if TRUE then it will also plot the normalized distance in the alignment over the 
     #   sliding for the local alignment and the global alignment
+#Returns: a dataframe with a time, query sequence, ref sequence and aligned sequence columns
 pairwiseAlignment <- function(df1, df2, dataColumns, stepPattern = NULL, showDistPlot = FALSE){
     
     #argument check
@@ -42,7 +43,7 @@ pairwiseAlignment <- function(df1, df2, dataColumns, stepPattern = NULL, showDis
     #query enters the reference from the left--------------------------------------------
     i <- nrow(df1)
     while(i >= 1){
-        #dataframe with the fraction of the whole df data
+        #dataframe with a fraction of the whole df data
         tempdf1 <- df1[i:nrow(df1), ]
         
         #alignment dtw function call
@@ -53,6 +54,8 @@ pairwiseAlignment <- function(df1, df2, dataColumns, stepPattern = NULL, showDis
                              open.end = TRUE, 
                              open.begin = FALSE), silent = TRUE)
         
+        #if the alignment fails (sometimes sequences are too short, we create a fake alignment object (list of 12),
+        #being the 12th element a very big number that will count as normalized distance)
         if(class(alignment) == 'try-error'){
             errorList <- list(100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 1000)
             #increase the size of the window
@@ -88,6 +91,8 @@ pairwiseAlignment <- function(df1, df2, dataColumns, stepPattern = NULL, showDis
                              open.end = FALSE, 
                              open.begin = TRUE), silent = TRUE)
         
+        #if the alignment fails (sometimes sequences are too short, we create a fake alignment object (list of 12),
+        #being the 12th element a very big number that will count as normalized distance)
         if(class(alignment) == 'try-error'){
             errorList <- list(100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 1000)
             #increase the size of the window
@@ -117,6 +122,8 @@ pairwiseAlignment <- function(df1, df2, dataColumns, stepPattern = NULL, showDis
                          open.end = TRUE, 
                          open.begin = TRUE), silent = TRUE)
     
+    #if the alignment fails (sometimes sequences are too short, we create a fake alignment object (list of 12),
+    #being the 12th element a very big number that will count as normalized distance)
     if(class(alignment) == 'try-error'){
         errorList <- list(100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 1000)
         #counter for the list of alignments
@@ -136,6 +143,8 @@ pairwiseAlignment <- function(df1, df2, dataColumns, stepPattern = NULL, showDis
                          open.end = FALSE, 
                          open.begin = FALSE), silent = TRUE)
     
+    #if the alignment fails (sometimes sequences are too short, we create a fake alignment object (list of 12),
+    #being the 12th element a very big number that will count as normalized distance)
     if(class(alignment) == 'try-error'){
         errorList <- list(100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 1000)
         #counter for the list of alignments
@@ -190,8 +199,10 @@ pairwiseAlignment <- function(df1, df2, dataColumns, stepPattern = NULL, showDis
         profileDf <- data.frame(time = c(1:max(nrow(df1), nrow(df2))), 
                                 dfref = NA, 
                                 dfquery = NA)
+        #get alignment with smallest normalized distance
         model <- aligList[[smallestDistMod]]
         
+        #match the indices from both sequences
         for(ind in unique(model$index2)){
             dfQueryData <- df1[model$index1[which(model$index2 == ind)], dataColumns[1]]
             dfRefData <- df2[ind, dataColumns[2]]
@@ -228,9 +239,9 @@ pairwiseAlignment <- function(df1, df2, dataColumns, stepPattern = NULL, showDis
         profileDf <- data.frame(time = c(1:(max(nrow(df1), nrow(df2)) + hanglength)), 
                                 dfref = NA, 
                                 dfquery = NA)
+        #extract the best model
         model <- aligList[[smallestDistMod]]
         profileDf[1:(nrow(df1) - length(unique(model$index1))), 'dfquery'] <- df1[1:(nrow(df1) - length(unique(model$index1))), dataColumns[1]]
-        #extract the best model
         
         continuation <- which(is.na(profileDf$dfquery))[1]-1
         #do the index alignment
@@ -304,6 +315,24 @@ pairwiseAlignment <- function(df1, df2, dataColumns, stepPattern = NULL, showDis
     return(profileDf)
 }
 
+
+#This function takes a list of time-series sequences and creates a sequence profile by multi-aligning all of them. This
+#profile can be later used to align the same or other sequences to it to create a multialignment. This profile is built
+#by calculating the distance matrix of the given sequence list, pair-wise aligning the two most similar sequences 
+#calling the previous function and using the mean sequence between both. Then the distance matrix is calculated again
+#with the new pair-wise alignment in it. This is done until one sequence (the profile is left). Since this is just
+#a fancy while loop with the arguments for the pair-wise alignment function you might consider coding this part yourself
+#to fit your multi-alignment needs
+#it has 6 arguments, the first 2 are required:
+# - dfList: list of dataframes that contain the sequences to be aligned
+# - dataColumns: a vector of length 2, indicating which columns from each df to be used for the alignment
+# - stepPattern: a list of length 4 with the different step patterns that can be used for the alignment, for more 
+#   information see the dtw package
+# - showDistPlot: a boolean, if TRUE then it will also plot the normalized distance in the alignment over the 
+#   sliding for the local alignment and the global alignment
+# - showDendrogram = plots the dendrogram of the distance matrix
+# - showAlignmentPlot = plots the alignment between the two sequences and the new aligned-sequence
+#Returns: a dataframe with a time, query sequence, ref sequence and aligned sequence columns
 multiAlignmentProfile <- function(dfList, dataColumns, stepPattern = NULL, 
                                   showDistPlot = FALSE, showDendrogram = FALSE, showAlignmentPlot = FALSE){
     
@@ -424,5 +453,8 @@ multiAlignmentProfile <- function(dfList, dataColumns, stepPattern = NULL,
         dfList[[length(dfList) + 1]] <- profileDf
         names(dfList)[length(dfList)] <- paste0(dfname1, dfname2)
     }
-    return(dfList)
+    return(unlist(dfList))
 }
+
+
+
