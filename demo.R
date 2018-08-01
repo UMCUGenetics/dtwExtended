@@ -36,10 +36,10 @@ dataList <- lapply(X = fractionsList, function(x){
 #test some univariate alignments
 
 #LEFT ---------
-profile <- localUnivariateAlignment(df1 = dataList[[1]], 
-                                    df2 = dataList[[2]], 
-                                    dataColumns = c(2, 2), 
-                                    showDistPlot = T)
+profile <- pairwiseUnivariateAlignment(df1 = dataList[[1]], 
+                                       df2 = dataList[[2]], 
+                                       dataColumns = c(2, 2), 
+                                       showDistPlot = F)
 
 #visual representation of the alignment
 require(ggplot2)
@@ -146,10 +146,19 @@ plot(gridplot)
 
 #next we will make a profile from doing a progressive pair-wise alignment of all the portions
 
-profileDfList <- multiAlignmentProfile(dfList = dataList, dataColumns = c(2,2), showDendrogram = F, showAlignmentPlot = T)
+profileDf <- multiAlignmentUnivariateProfile(dfList = dataList, dataColumns = c(2,2), showDendrogram = F, showAlignmentPlot = T)
 
 
-ggplot(data = profileDfList[[1]], aes(x = time, y = uni)) + 
+ggplot(data = profileDf, aes(x = time, y = uni)) + 
     geom_point() + 
-    coord_cartesian(ylim = c(-1,1)) + 
-    ggtitle('Sequence1')
+    coord_cartesian(ylim = c(-1,1)) 
+
+
+#circularization of the profile ------------------------
+#since we know that our data is a loop over time. We will use the next function to reduce it to a single frequency 
+
+circularDf <- circularizeSequenceUnivariate(sequenceDf = profileDf, dataColumn = 4)
+
+ggplot(data = circularDf, aes(x = time, y = uni)) + 
+    geom_point() + 
+    coord_cartesian(ylim = c(-1,1)) 
