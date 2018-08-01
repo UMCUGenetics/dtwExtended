@@ -78,6 +78,8 @@ Outcome                         THEQUICKBROWNFOXJUMPSOVER (aligned and duplicate
 
 ## In progress
 
+* Multivariate alignment
+
 ## Dependencies
 
 * `dtw` (required)
