@@ -2,7 +2,7 @@
 #the functions in the function.R script to do multiple dtw alignment, local alignment and 
 #circular alignment
 
-#We will generate a sinus sequence of 2 frequencies length and subset portions of the sequence 
+#We will generate a sinus sequence of 1.3 frequencies length and subset portions of the sequence 
 #of different length that have some overlap between them
 
 #representation of the data
@@ -63,10 +63,10 @@ gridplot <- grid.arrange(grobs = plotList, ncol = 1, as.table = FALSE)
 
 
 #RIGHT ---------
-profile <- localUnivariateAlignment(df1 = dataList[[3]], 
-                                    df2 = dataList[[2]], 
-                                    dataColumns = c(2, 2), 
-                                    showDistPlot = T)
+profile <- pairwiseUnivariateAlignment(df1 = dataList[[3]], 
+                                       df2 = dataList[[2]], 
+                                       dataColumns = c(2, 2), 
+                                       showDistPlot = T)
 
 #visual representation of the alignment
 require(ggplot2)
@@ -90,10 +90,10 @@ gridplot <- grid.arrange(grobs = plotList, ncol = 1, as.table = FALSE)
 
 
 #LOCAL ---------
-profile <- localUnivariateAlignment(df1 = dataList[[7]], 
-                                    df2 = dataList[[8]], 
-                                    dataColumns = c(2, 2), 
-                                    showDistPlot = T)
+profile <- pairwiseUnivariateAlignment(df1 = dataList[[7]], 
+                                       df2 = dataList[[8]], 
+                                       dataColumns = c(2, 2), 
+                                       showDistPlot = T)
 
 #visual representation of the alignment
 require(ggplot2)
@@ -117,10 +117,10 @@ gridplot <- grid.arrange(grobs = plotList, ncol = 1, as.table = FALSE)
 
 
 #GLOBAL ---------
-profile <- localUnivariateAlignment(df1 = dataList[[9]], 
-                                    df2 = dataList[[10]], 
-                                    dataColumns = c(2, 2), 
-                                    showDistPlot = T)
+profile <- pairwiseUnivariateAlignment(df1 = dataList[[9]], 
+                                       df2 = dataList[[10]], 
+                                       dataColumns = c(2, 2), 
+                                       showDistPlot = T)
 
 #visual representation of the alignment
 require(ggplot2)
@@ -146,7 +146,7 @@ plot(gridplot)
 
 #next we will make a profile from doing a progressive pair-wise alignment of all the portions
 
-profileDf <- multiAlignmentUnivariateProfile(dfList = dataList, dataColumns = c(2,2), showDendrogram = F, showAlignmentPlot = T)
+profileDf <- multiUnivariateAlignmentProfile(dfList = dataList, dataColumns = c(2,2), showDendrogram = F, showAlignmentPlot = T)
 
 
 ggplot(data = profileDf, aes(x = time, y = uni)) + 
@@ -157,7 +157,7 @@ ggplot(data = profileDf, aes(x = time, y = uni)) +
 #circularization of the profile ------------------------
 #since we know that our data is a loop over time. We will use the next function to reduce it to a single frequency 
 
-circularDf <- circularizeSequenceUnivariate(sequenceDf = profileDf, dataColumn = 4)
+circularDf <- circularizeUnivariateSequence(sequenceDf = profileDf, dataColumn = 4)
 
 ggplot(data = circularDf, aes(x = time, y = uni)) + 
     geom_point() + 
@@ -165,7 +165,7 @@ ggplot(data = circularDf, aes(x = time, y = uni)) +
 
 
 #rotate the circularized sequence so that it starts at 0
-circularDf <- rotateSeq(circularDf = circularDf, newstart = 28)
+circularDf <- rotateSequence(circularDf = circularDf, newstart = 29)
 
 ggplot(data = circularDf, aes(x = time, y = uni)) + 
     geom_point() + 

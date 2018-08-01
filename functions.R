@@ -333,7 +333,7 @@ pairwiseUnivariateAlignment <- function(df1, df2, dataColumns, stepPattern = NUL
 # - showDendrogram = plots the dendrogram of the distance matrix
 # - showAlignmentPlot = plots the alignment between the two sequences and the new aligned-sequence
 #Returns: a dataframe with a time, query sequence, ref sequence and aligned sequence columns
-multiAlignmentUnivariateProfile <- function(dfList, dataColumns, stepPattern = NULL, 
+multiUnivariateAlignmentProfile <- function(dfList, dataColumns, stepPattern = NULL, 
                                             showDistPlot = FALSE, showDendrogram = FALSE, showAlignmentPlot = FALSE){
     
     
@@ -428,32 +428,32 @@ multiAlignmentUnivariateProfile <- function(dfList, dataColumns, stepPattern = N
         print(paste(dfname1, 'and' ,dfname2))
         
         if('uni' %in% colnames(df1) & 'uni' %in% colnames(df2)){
-            profileDf <- pairwiseAlignment(df1 = df1, 
-                                           df2 = df2, 
-                                           dataColumns = c(which(colnames(df1) == 'uni'), 
-                                                           which(colnames(df2) == 'uni')), 
-                                           stepPattern = stepPattern,
-                                           showDistPlot = showDistPlot)
+            profileDf <- pairwiseUnivariateAlignment(df1 = df1, 
+                                                     df2 = df2, 
+                                                     dataColumns = c(which(colnames(df1) == 'uni'), 
+                                                                     which(colnames(df2) == 'uni')), 
+                                                     stepPattern = stepPattern,
+                                                     showDistPlot = showDistPlot)
         }else if('uni' %in% colnames(df1)){
-            profileDf <- pairwiseAlignment(df1 = df1, 
-                                           df2 = df2, 
-                                           dataColumns = c(which(colnames(df1) == 'uni'), 
-                                                           dataColumns[2]), 
-                                           stepPattern = stepPattern,
-                                           showDistPlot = showDistPlot)
+            profileDf <- pairwiseUnivariateAlignment(df1 = df1, 
+                                                     df2 = df2, 
+                                                     dataColumns = c(which(colnames(df1) == 'uni'), 
+                                                                     dataColumns[2]), 
+                                                     stepPattern = stepPattern,
+                                                     showDistPlot = showDistPlot)
         }else if('uni' %in% colnames(df2)){
-            profileDf <- pairwiseAlignment(df1 = df1, 
-                                           df2 = df2, 
-                                           dataColumns = c(dataColumns[1], 
-                                                           which(colnames(df2) == 'uni')), 
-                                           stepPattern = stepPattern,
-                                           showDistPlot = showDistPlot)
+            profileDf <- pairwiseUnivariateAlignment(df1 = df1, 
+                                                     df2 = df2, 
+                                                     dataColumns = c(dataColumns[1],
+                                                                     which(colnames(df2) == 'uni')), 
+                                                     stepPattern = stepPattern,
+                                                     showDistPlot = showDistPlot)
         }else{
-            profileDf <- pairwiseAlignment(df1 = df1, 
-                                           df2 = df2, 
-                                           dataColumns = dataColumns, 
-                                           stepPattern = stepPattern,
-                                           showDistPlot = showDistPlot)
+            profileDf <- pairwiseUnivariateAlignment(df1 = df1, 
+                                                     df2 = df2, 
+                                                     dataColumns = dataColumns, 
+                                                     stepPattern = stepPattern,
+                                                     showDistPlot = showDistPlot)
         }
         
         if(showAlignmentPlot){
@@ -495,7 +495,7 @@ multiAlignmentUnivariateProfile <- function(dfList, dataColumns, stepPattern = N
 #   sliding for the local alignment and the global alignment
 #Returns: a dataframe with a time, query sequence, ref sequence and aligned sequence columns that corresponds to a 
 #loop of the time-series data
-circularizeSequenceUnivariate <- function(sequenceDf, dataColumn, stepPattern = NULL, showDistPlot = FALSE){
+circularizeUnivariateSequence <- function(sequenceDf, dataColumn, stepPattern = NULL, showDistPlot = FALSE){
     
     
     #argument check
@@ -511,7 +511,7 @@ circularizeSequenceUnivariate <- function(sequenceDf, dataColumn, stepPattern = 
     if(!is.data.frame(sequenceDf)){
         stop(print('seqeunceDf needs to be dataframes objects'))
     }
-    if(!is.integer(dataColumn)){
+    if(!is.numeric(dataColumn)){
         stop(print('dataColumn needs to be an integer object'))
     }
     if(length(dataColumn) > 1){
@@ -692,7 +692,20 @@ circularizeSequenceUnivariate <- function(sequenceDf, dataColumn, stepPattern = 
 # - circularDf: a dataframe with the time-series sequence that has been circularized
 # - newstart: an integer that indicates which should be the new starting point of the sequence
 #Returns: a dataframe with the indicated row as first
-rotateSeq <- function(circularDf, newstart){
+rotateSequence <- function(circularDf, newstart){
+    
+    #argument checks
+    if(missing(circularDf) | missing(newstart)){
+        stop(print('You are missing the minimum required arguments: circularDf and/or newstart'))
+    }
+    if(!is.data.frame(circularDf)){
+        stop(print('seqeunceDf needs to be a dataframe object'))
+    }
+    if(!is.numeric(newstart)){
+        stop(print('newstart needs to be an integer'))
+    }else if(newstart < 1 | newstart > nrow(circularDf)){
+        stop(print('newstart can be a minimum of 1 and a maximum of your sequence length'))
+    }
     
     tempDfstart <- circularDf[newstart:nrow(circularDf),]
     tempDfend <- circularDf[1:(newstart-1),]
