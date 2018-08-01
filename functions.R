@@ -336,6 +336,31 @@ pairwiseUnivariateAlignment <- function(df1, df2, dataColumns, stepPattern = NUL
 multiAlignmentUnivariateProfile <- function(dfList, dataColumns, stepPattern = NULL, 
                                             showDistPlot = FALSE, showDendrogram = FALSE, showAlignmentPlot = FALSE){
     
+    
+    #argument check
+    if(is.null(stepPattern)){
+        stepPattern <- list(asymmetricP05, asymmetricP05, asymmetricP05, symmetricP2)
+    }else if(length(stepPattern) != 4){
+        stop(print('Please provide 4 step patterns as a vector or leave it empty for default settings.'))
+    }
+    
+    if(missing(dfList) |  missing(dataColumns)){
+        stop(print('You are missing the minimum required arguments: dfList and/or dataColumns'))
+    }else if(length(dfList) < 2){
+        stop(print('You need at least 2 dataframes with data in the list'))
+    }
+    
+    if(!is.list(dfList)){
+        stop(print('df1 and df2 need to be dataframes objects'))
+    }
+    if(!is.vector(dataColumns)){
+        stop(print('dataColumns needs to be a vector object'))
+    }
+    if(length(dataColumns) != 2){
+        stop(print('dataColumns needs to be a vector of length 2, 
+                   each number corresponds to a column of df1 and df2 for pairwise alignment'))
+    }
+    
     require(dtw)
     
     while(length(dfList) > 1){
@@ -460,12 +485,31 @@ multiAlignmentUnivariateProfile <- function(dfList, dataColumns, stepPattern = N
 
 circularizeSequenceUnivariate <- function(sequenceDf, dataColumn, stepPattern = NULL, showDistPlot = FALSE){
     
-    aligList <- list()
-    k <- 0
     
+    #argument check
     if(is.null(stepPattern)){
         stepPattern <- list(asymmetricP05, asymmetricP05)
+    }else if(length(stepPattern) != 2){
+        stop(print('Please provide 2 step patterns as a vector or leave it empty for default settings.'))
     }
+    
+    if(missing(sequenceDf) | missing(dataColumn)){
+        stop(print('You are missing the minimum required arguments: sequenceDf and/or dataColumn'))
+    }
+    if(!is.data.frame(sequenceDf)){
+        stop(print('seqeunceDf needs to be dataframes objects'))
+    }
+    if(!is.integer(dataColumn)){
+        stop(print('dataColumn needs to be an integer object'))
+    }
+    if(length(dataColumn) > 1){
+        stop(print('dataColumns needs to be a integer (length = 1)'))
+    }
+    
+    
+    require(dtw)
+    aligList <- list()
+    k <- 0
     
     #cut the profile in half and try to fit it from the left to the complete profile
     cutDfLeft <- sequenceDf[round(nrow(sequenceDf)/2):nrow(sequenceDf),]
