@@ -162,3 +162,11 @@ circularDf <- circularizeSequenceUnivariate(sequenceDf = profileDf, dataColumn =
 ggplot(data = circularDf, aes(x = time, y = uni)) + 
     geom_point() + 
     coord_cartesian(ylim = c(-1,1)) 
+
+
+#rotate the circularized sequence so that it starts at 0
+circularDf <- rotateSeq(circularDf = circularDf, newstart = 28)
+
+ggplot(data = circularDf, aes(x = time, y = uni)) + 
+    geom_point() + 
+    coord_cartesian(ylim = c(-1,1)) 
