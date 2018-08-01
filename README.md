@@ -14,6 +14,8 @@ Ref:        TEACUP-----    CUPBOARD    CUPBOARD    CUPBOARD
 Query:      ---CUPBOARD    CUP-----    ---BOARD    ---BOAR-
 ```
 
+### Sliding the query sequence approach
+
 To be able to generate the type 1 alignments, we use a progressive elongation of the length of the query sequence to test all possible type 2 (see example below):
 
 ```
@@ -26,7 +28,9 @@ Query:  P-------    UP------    CUP-----    ACUP----    EACUP---    TEACUP--
 
 It is clear from the previous example that the 3rd alignment is the correct one. The only thing that remains is to add the TEA part at the beginning of the CUP query sequence. This same process is applied with continuous time-series data. To decide which is the best alignment the normalized distance between sequences is used. The function `pairwiseUnivariateAlignment` tests all possible type 1 alignments (sliding the query from both the right and left sides), a local alignment with gaps at both sides of the query sequence, and a global alignment (no gaps in any sequence). After all possible alignments are tested, the best one is given as an output.
 
-When can this type of alignment be useful? This type of alignment can be used if you are not able to measure the whole sequence of a time-series. You have several measurements that together show the complete sequence, using the overlaps between those measurements alignments can be made to get the whole picture of the sequence (see example below).
+### What can it be used for?
+
+This type of alignment can be used if you are not able to measure the whole sequence of a time-series. You have several measurements that together show the complete sequence, using the overlaps between those measurements alignments can be made to get the whole picture of the sequence (see example below).
 
 ```
 Complete sequence   THEQUICKBROWNFOXJUMPSOVERTHELAZYDOG
@@ -37,6 +41,27 @@ Fragment2                    ROWNFOXJUM
 Fragment3                          XJUMPSOVERTHELA    
                                               ||||
 Fragment4                                     HELAZYDOG
+```
+
+Another utility is to circularize a sequence. For example, time-series that involve circadian type of data my want to align their data without extending to more than one cycle (see example below). This can be done using the `circularizeUnivariateSequence` function.
+
+```
+First alignments
+Cyclic sequence   THEQUICKBROWNFOXJUMPSOVERTHEQUICKBROWFOX
+Fragment1         THEQUICKBRO
+                           ||
+Fragment2                  ROWNFOXJUM
+                                 ||||
+Fragment3                        XJUMPSOVERTHEQUICK    
+                   ||||||||||
+Fragment4          HEQUICKBROWNFOX                  (aligned to fragment1)
+Outcome           THEQUICKBROWNFOXJUMPSOVERTHEQUICK
+
+Circularization
+                                THEQUICKBROWNFOXJUMPSOVERTHEQUICK
+                                ||||||||
+2nd half               JUMPSOVERTHEQUICK
+Outcome                         THEQUICKBROWNFOXJUMPSOVER (aligned and duplicated parts removed)
 ```
 
 ## Contents
@@ -58,3 +83,4 @@ Fragment4                                     HELAZYDOG
 * `dtw` (required)
 * `ggplot2` (recommended)
 * `gridExtra` (recommended)
+
