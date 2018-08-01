@@ -67,10 +67,10 @@ Outcome                         THEQUICKBROWNFOXJUMPSOVER (aligned and duplicate
 ## Contents
 
 * Functions
-    * `pairwiseUnivariateAlignment`:
-    * `multiUnivariateAlignmentProfile`:
-    * `circularizeUnivariateSequence`:
-    * `rotateSequence`:
+    * `pairwiseUnivariateAlignment`: generates a local or global alignment based on the minimum normalized distance
+    * `multiUnivariateAlignmentProfile`: generates a profile alignment based on multiple pairwise alignments
+    * `circularizeUnivariateSequence`: reduces to 1 cycle a cyclic sequence
+    * `rotateSequence`: sets the starting point of a circularized sequence
     
 * Demo: contains examples of all of the above functions. It uses as data a sequence generated from the `sin` function.
 
