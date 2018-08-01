@@ -482,7 +482,19 @@ multiAlignmentUnivariateProfile <- function(dfList, dataColumns, stepPattern = N
 }
 
 
-
+#this function takes as input a single time-series sequence and tries to align it with itself in order to obtain
+#a single frequency of its loop. This only makes sense if you know that your sequence loops over time. This is done
+#by cutting half the sequence and trying to align it locally from the other extreme of the original sequence. This is 
+#done from both sides. 
+#it has 5 arguments, the first 2 are required:
+# - sequenceDf: a dataframe with the time-series sequence that needs to be circularized
+# - dataColumn: an integer that indicates which column of dfSequence contains the data
+# - stepPattern: a list of length 2 with the different step patterns that can be used for the alignment, for more 
+#   information see the dtw package
+# - showDistPlot: a boolean, if TRUE then it will also plot the normalized distance in the alignment over the 
+#   sliding for the local alignment and the global alignment
+#Returns: a dataframe with a time, query sequence, ref sequence and aligned sequence columns that corresponds to a 
+#loop of the time-series data
 circularizeSequenceUnivariate <- function(sequenceDf, dataColumn, stepPattern = NULL, showDistPlot = FALSE){
     
     
@@ -672,4 +684,20 @@ circularizeSequenceUnivariate <- function(sequenceDf, dataColumn, stepPattern = 
         return(profileDf)
         
     }
+}
+
+
+#this is a very short function that takes a circularized sequence and rotates its start point
+#it has 2 arguments, both are required:
+# - circularDf: a dataframe with the time-series sequence that has been circularized
+# - newstart: an integer that indicates which should be the new starting point of the sequence
+#Returns: a dataframe with the indicated row as first
+rotateSeq <- function(circularDf, newstart){
+    
+    tempDfstart <- circularDf[newstart:nrow(circularDf),]
+    tempDfend <- circularDf[1:(newstart-1),]
+    newcircularDf <- rbind(tempDfstart, tempDfend)
+    newcircularDf$time <- c(1:nrow(newcircularDf))
+    return(newcircularDf)
+    
 }
