@@ -76,9 +76,12 @@ Outcome                         THEQUICKBROWNFOXJUMPSOVER (aligned and duplicate
 
 ## Considerations
 
+* Profile value calculation: in `pairwiseUnivariateAlignment`, the `uni` column contains the `mean` of the two sequences. One should consider if this approach fits with ones requirements. This is specially true when using `multiUnivariateAlignmentProfile`, since if a sequence is the result of 4 previous sequences and it is aligned with an 'individual' sequence, both values will have the same weight. It could be argued that an 80%-20% weight should be applied in this case.
+
 ## In progress
 
 * Multivariate alignment
+* Alignment of independent data to the alignment
 
 ## Dependencies
 
