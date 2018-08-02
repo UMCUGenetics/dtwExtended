@@ -1,8 +1,10 @@
-# Multi-circular dynamic time warping alignment
+# dtwExtended
 
 ## Introduction
 
-In this repository you will find some functions that extend the capabilities of the `dtw` package. 
+Dynamic time warping can be used to align time-series of continuous data. In R, the `dtw` package provides with a set of very useful tools to apply it. In this repository you will find some functions that extend the capabilities of this package. 
+
+### Gaps both in reference and query sequence
 
 One of the limitations of `dtw` is that in pairwise local alignments (open end, open begin or both), gaps can only be placed at the query sequence and not the reference sequence. This can be an issue if one tries to align sequences in which the beginning of one sequence aligns with the end of the other sequence (see example below). The following examples, although depicted as discrete sequences, should give an idea of the rationale behind.
 
